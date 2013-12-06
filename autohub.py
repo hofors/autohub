@@ -17,7 +17,6 @@ import sys
 import signal
 import threading
 import os
-import dbusif
 import jsonrpcif
 import syslog
 import getopt
@@ -201,10 +200,8 @@ signal.signal(signal.SIGTERM, quit)
 signal.signal(signal.SIGINT, quit)
 
 autohub = AutoHub(dev_filename, state_filename)
-#dif = dbusif.DBusIf(autohub)
 jif = jsonrpcif.JSONRPCIf(autohub)
 shouldStop = False
-#dif.start()
 jif.start()
 autohub.start()
 while not shouldStop:
