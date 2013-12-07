@@ -50,8 +50,8 @@ class Decoder:
     def get_uint(self, index):
         return struct.unpack_from("!I", self.packet_data, index)[0]
     def parse_packet(self):
-        if len(self.packet_data) == 0:
-            syslog.syslog(syslog.LOG_WARNING, "Got packet with len 0.")
+        if len(self.packet_data) <= 1:
+            syslog.syslog(syslog.LOG_WARNING, "Got too short packet (%d bytes)." % len(self.packet_data))
             return
         ptype = self.get_byte(1)
         if ptype == TYPE_INTERFACE_MESSAGE:
