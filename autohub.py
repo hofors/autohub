@@ -26,6 +26,7 @@ class TempSensor:
     def __init__(self, sensor_id):
         self.sensor_id = sensor_id
         self.name = None
+        self.last_update = None
     def update(self, temp, signal_level):
         self.last_update = time.time()
         self.temp = temp

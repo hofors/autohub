@@ -26,8 +26,12 @@ def make_url(host, port):
 
 def temp_cmd(server):
     for sensor in server.list_temp_sensors():
-        print "Sensor %s [%d]: %3.1f °C" % (sensor[1].encode("UTF-8"), \
-                                                sensor[0], sensor[2])
+        if sensor[3]:
+            age = "%.0f s" % sensor[3]
+        else:
+            age = "unknown"
+        print "Sensor %s [%d]: %3.1f °C [%s]" % (sensor[1].encode("UTF-8"), \
+                                                     sensor[0], sensor[2], age)
     return 0
 
 def temp_m_cmd(server):

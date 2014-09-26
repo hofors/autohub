@@ -1,6 +1,7 @@
 from jsonrpclib.SimpleJSONRPCServer import SimpleJSONRPCServer
 import threading
 import traceback
+import time
 
 DEFAULT_PORT=3444
 
@@ -26,7 +27,11 @@ class JSONRPCIf (threading.Thread):
                 name = "%d" % s.sensor_id
             else:
                 name = s.name
-            result.append((s.sensor_id, name, s.temp))
+            if s.last_update:
+                age = time.time()-s.last_update
+            else:
+                age = None
+            result.append((s.sensor_id, name, s.temp, age))
         self.autohub.unlock()
         return result
     def del_temp_sensor(self, sensor_id):
