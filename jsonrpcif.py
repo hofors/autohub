@@ -17,7 +17,8 @@ class JSONRPCIf (threading.Thread):
                        self.set_switch_name, self.set_switch_by_name, \
                        self.get_switch_by_name, \
                        self.set_temp_sensor_name, \
-                       self.del_temp_sensor]:
+                       self.del_temp_sensor, \
+                       self.get_event_log]:
             self.server.register_function(f)
     def list_temp_sensors(self):
         result = []
@@ -84,6 +85,7 @@ class JSONRPCIf (threading.Thread):
             traceback.print_exc()
         self.autohub.unlock()
     def set_switch_by_name(self, name, state):
+        result = None
         self.autohub.lock()
         try:
             if self.autohub.has_switch_by_name(name):
@@ -102,6 +104,14 @@ class JSONRPCIf (threading.Thread):
         else:
             s = self.autohub.get_switch_by_name(name)
             result = [ True, s.state ]
+        self.autohub.unlock()
+        return result
+    def get_event_log(self):
+        result = []
+        self.autohub.lock()
+        for e in self.autohub.event_log:
+            result.append((e.event_type, e.event_time, e.device_id,
+                           e.unit_id, e.source_name, e.event_value))
         self.autohub.unlock()
         return result
     def run(self):

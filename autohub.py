@@ -32,6 +32,20 @@ class TempSensor:
         self.temp = temp
         self.signal_level = signal_level
 
+EVENT_TYPE_BUTTON_PRESSED = "button-pressed"
+EVENT_TYPE_SENSOR_READING = "sensor-reading"
+EVENT_TYPE_SWITCH_SET = "switch-set"
+
+class Event:
+    def __init__(self, event_type, event_time, device_id, unit_id, source_name,
+                 event_value):
+        self.event_type = event_type
+        self.event_time = event_time
+        self.device_id = device_id
+        self.unit_id = unit_id
+        self.source_name = source_name
+        self.event_value = event_value
+
 class Switch:
     def __init__(self, device_id, unit_id, name=None, state=None,
                  last_update=None):
@@ -50,6 +64,11 @@ class Switch:
         if self.seq_no > 255:
             self.seq_no = 0
         return seq_no
+    def state_str(self):
+        if self.state:
+            return "on"
+        else:
+            return "off"
 
 def synchronized():
     '''Synchronization decorator.'''
@@ -63,11 +82,14 @@ def synchronized():
         return new_function
     return wrap
 
+MAX_EVENT_LOG_SIZE = 10000
+
 class AutoHub:
     def __init__(self, dev_filename, state_filename):
         self._rfxtrx433 = rfxtrx433.RFXtrx433(dev_filename, self._handle_temp)
         self.temp_sensors = {}
         self.switches = []
+        self.event_log = []
         self._lock = threading.RLock()
         self.state_filename = state_filename
         self._load()
@@ -105,9 +127,16 @@ class AutoHub:
         switch = self.get_switch(device_id, unit_id)
         self._set_switch(switch, state)
     def _set_switch(self, switch, state):
+        old_state_str = switch.state_str()
         switch.update(state)
         self._rfxtrx433.set_switch(switch.device_id, switch.unit_id,
                                    switch.next_seq_no(), state)
+        syslog.syslog(syslog.LOG_INFO, "Setting switch \"%s\" (0x%x %x) "
+                      "from %s to %s." % (switch.name.encode("UTF-8"),
+                                          switch.device_id, switch.unit_id,
+                                          old_state_str, switch.state_str()))
+        self.add_event(EVENT_TYPE_SWITCH_SET, switch.device_id,
+                       switch.unit_id, switch.name, switch.state_str())
     def _switch_index(self, device_id, unit_id):
         for i in range(0, len(self.switches)):
             s = self.switches[i]
@@ -129,26 +158,42 @@ class AutoHub:
         assert idx != -1
         return self.switches[idx]
     @synchronized()
+    def clear_event_log(self):
+        self.event_log = []
+    @synchronized()
+    def add_event(self, event_type, device_id, unit_id, source_name,
+                  event_value):
+        self.event_log.append(Event(event_type, time.time(), device_id, unit_id,
+                                    source_name, event_value))
+        while len(self.event_log) > MAX_EVENT_LOG_SIZE:
+            del self.event_log[0]
+    @synchronized()
     def _handle_temp(self, sensor_id, seq_no, temp, signal_level):
-        syslog.syslog(syslog.LOG_DEBUG, "Got reading from sensor %d; "
+        syslog.syslog(syslog.LOG_DEBUG, "Got reading from sensor 0x%x; "
                       "seq no %d; signal level %d; temperature %3.2f" % \
                           (sensor_id, seq_no, signal_level, temp))
         if not self.temp_sensors.has_key(sensor_id):
             syslog.syslog(syslog.LOG_DEBUG,
                           "Sensor %d has not been seen before." % sensor_id)
             self.temp_sensors[sensor_id] = TempSensor(sensor_id)
-        self.temp_sensors[sensor_id].update(temp, signal_level)
+        sensor = self.temp_sensors[sensor_id]
+        sensor.update(temp, signal_level)
+        self.add_event(EVENT_TYPE_SENSOR_READING, sensor.sensor_id, 0,
+                       sensor.name, str(sensor.temp))
     def _load(self):
         s = shelve.open(self.state_filename)
         if s.has_key("switches"):
             self.switches = s["switches"]
         if s.has_key("temp_sensors"):
             self.temp_sensors = s["temp_sensors"]
+        if s.has_key("event_log"):
+            self.event_log = s["event_log"]
         s.close()
     def _save(self):
         s = shelve.open(self.state_filename)
         s["switches"] = self.switches
         s["temp_sensors"] = self.temp_sensors
+        s["event_log"] = self.event_log
         s.close()
 
 

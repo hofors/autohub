@@ -5,6 +5,7 @@ import sys
 import getopt
 import jsonrpclib
 import os
+import time
 
 DEFAULT_HOST="localhost"
 DEFAULT_PORT=3444
@@ -19,6 +20,7 @@ def usage(name):
     print "%s [-s server] switch set <device-id> <unit-id> on|off" % name
     print "%s [-s server] switch set <name> on|off" % name
     print "%s [-s server] switch set-name <device-id> <unit-id> <name>" % name
+    print "%s [-s server] event" % name
     print "%s -h" % name
 
 def make_url(host, port):
@@ -100,6 +102,21 @@ def set_switch_name_cmd(server, s_device_id, s_unit_id, s_name):
     server.set_switch_name(int(s_device_id, 16), int(s_unit_id, 10), s_name)
     return 0
 
+def get_event_log_cmd(server):
+    for event in server.get_event_log():
+        (event_type, event_time, device_id, unit_id, source_name, \
+             event_value) = event
+        if not source_name:
+            source_name = "Unnamed"
+        value_s = ""
+        if event_value:
+            value_s = ": %s" % event_value
+        event_time_s = time.ctime(event_time)
+        print "%s: %s \"%s\" [0x%x %d]%s" % (event_time_s, event_type,
+                                             source_name, device_id,
+                                             unit_id, value_s)
+    return 0
+
 env_host = os.getenv('AUTOHUB_SERVER')
 
 if env_host:
@@ -155,7 +172,9 @@ elif args[0] == "switch":
             ecode = set_switch_cmd(s, args[3], name=args[2])
         elif args[1] == "set-name" and len(args) == 5:
             ecode = set_switch_name_cmd(s, args[2], args[3], args[4])
-
+elif args[0] == "event":
+    if len(args) == 1:
+        ecode = get_event_log_cmd(s)
 if ecode == None:
     usage(sys.argv[0])
     sys.exit(1)

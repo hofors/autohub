@@ -52,12 +52,18 @@ def start_time(target, heat_t):
         start = now+datetime.timedelta(minutes=1)
     return start
 
+def target_time(target_h, target_m):
+    target = to_datetime(target_h, target_m)
+    if datetime.datetime.now() > target:
+        target += datetime.timedelta(hours=24)
+    return target
+
 def schedule_switch(state, t):
     if state:
         state_s = "on"
     else:
         state_s = "off"
-    s = "echo ahc switch set %s %s | at %d:%d" % (HEATER_SWITCH, state_s, t.hour, t.minute)
+    s = "echo ahc switch set %s %s | at %02d:%02d" % (HEATER_SWITCH, state_s, t.hour, t.minute)
     os.system(s)
 
 env_host = os.getenv('AUTOHUB_SERVER')
@@ -76,7 +82,7 @@ target_h_s, target_m_s = sys.argv[1].split(":")
 target_h = int(target_h_s)
 target_m = int(target_m_s)
 
-target = to_datetime(target_h, target_m)
+target = target_time(target_h, target_m)
 
 s = jsonrpclib.Server(make_url(host, DEFAULT_PORT))
 
@@ -89,4 +95,3 @@ syslog.syslog("Target time is %02d:%02d. Outside temp is %3.1f. Heating time is 
 
 schedule_switch(True, start)
 schedule_switch(False, stop)
-
