@@ -14,6 +14,7 @@ def usage(name):
     print "%s [-s server] temp" % name
     print "%s [-s server] temp set-name <sensor-id> <name>" % name
     print "%s [-s server] temp del <sensor-id>" % name
+    print "%s [-s server] temp purge" % name
     print "%s [-s server] switch" % name
     print "%s [-s server] switch get <device-id> <unit-id>" % name
     print "%s [-s server] switch get <name>" % name
@@ -50,6 +51,14 @@ def temp_del_cmd(server, sensor_id):
         return 0
     else:
         return 1
+
+STALETIME=60*10
+def temp_purge_cmd(server):
+    for sensor in server.list_temp_sensors():
+        if sensor[3] > STALETIME:
+            if not server.del_temp_sensor(sensor[0]):
+                return 1
+    return 0
 
 def state_str(state):
     if state:
@@ -153,6 +162,8 @@ if args[0] == "temp":
         ecode = temp_cmd(s)
     elif len(args) == 3 and args[1] == "del":
         ecode = temp_del_cmd(s, int(args[2]))
+    elif len(args) == 2 and args[1] == "purge":
+        ecode = temp_purge_cmd(s)
     elif len(args) == 4 and args[1] == "set-name":
         ecode = temp_set_name_cmd(s, int(args[2]), args[3])
 elif args[0] == "temp-m" and len(args) == 1:
