@@ -73,7 +73,7 @@ class Decoder:
                 temp = (self.get_byte(6)*256+self.get_byte(7)) / 10.0
             else:
                 temp = - ((self.get_byte(6) & 0x7F)*256 + self.get_byte(7)) / 10.0
-            signal_level = self.get_byte(8) << 4
+            signal_level = (self.get_byte(8) & 0xf0) >> 4
             self.temp_cb(addr, seq_no, temp, signal_level)
             if self.get_byte(8) & 0xf == 0:
                 syslog.syslog(syslog.LOG_WARNING,
@@ -88,7 +88,7 @@ class Decoder:
             addr = self.get_uint(4)
             unit = self.get_byte(8)
             state = self.get_byte(9)
-            signal_level = self.get_byte(11) << 4
+            signal_level = (self.get_byte(11) & 0xf0) >> 4
             syslog.syslog(syslog.LOG_DEBUG, "Lighting 2 - AC type message received. Seqno %d, device address 0x%x, unit %d, state %d, signal_level %d." % (seq_no, addr, unit, state, signal_level))
         else:
             syslog.syslog(syslog.LOG_WARNING,
