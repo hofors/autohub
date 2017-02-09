@@ -32,7 +32,11 @@ class JSONRPCIf (threading.Thread):
                 age = time.time()-s.last_update
             else:
                 age = None
-            result.append((s.sensor_id, name, s.temp, age))
+            if s.hum == None:
+                result.append((s.sensor_id, name, s.temp, age, None))
+            else:
+                result.append((s.sensor_id, name, s.temp, age, s.hum))
+
         self.autohub.unlock()
         return result
     def del_temp_sensor(self, sensor_id):
