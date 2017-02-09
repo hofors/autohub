@@ -33,13 +33,20 @@ def temp_cmd(server):
             age = "%.0f s" % sensor[3]
         else:
             age = "unknown"
-        print "Sensor %s [%d]: %3.1f °C [%s]" % (sensor[1].encode("UTF-8"), \
+        if sensor[4]:
+            print "Sensor %s [%d]: %3.1f °C, %d %%RH [%s]" % (sensor[1].encode("UTF-8"), \
+                                                    sensor[0], sensor[2], sensor[4], age)
+        else:
+            print "Sensor %s [%d]: %3.1f °C [%s]" % (sensor[1].encode("UTF-8"), \
                                                      sensor[0], sensor[2], age)
     return 0
 
 def temp_m_cmd(server):
     for sensor in server.list_temp_sensors():
-        print "%s %3.1f" % (sensor[1].encode("UTF-8"), sensor[2])
+        if sensor[4]:
+            print "%s %3.1f %d" % (sensor[1].encode("UTF-8"), sensor[2], sensor[4])
+        else:
+            print "%s %3.1f" % (sensor[1].encode("UTF-8"), sensor[2])
     return 0
 
 def temp_set_name_cmd(server, sensor_id, name):

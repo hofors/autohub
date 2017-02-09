@@ -27,9 +27,11 @@ class TempSensor:
         self.sensor_id = sensor_id
         self.name = None
         self.last_update = None
-    def update(self, temp, signal_level):
+        self.hum = None
+    def update(self, temp, signal_level, hum=None):
         self.last_update = time.time()
         self.temp = temp
+        self.hum = hum
         self.signal_level = signal_level
 
 EVENT_TYPE_BUTTON_PRESSED = "button-pressed"
@@ -168,16 +170,17 @@ class AutoHub:
         while len(self.event_log) > MAX_EVENT_LOG_SIZE:
             del self.event_log[0]
     @synchronized()
-    def _handle_temp(self, sensor_id, seq_no, temp, signal_level):
+    def _handle_temp(self, sensor_id, seq_no, temp, signal_level, hum):
         syslog.syslog(syslog.LOG_DEBUG, "Got reading from sensor 0x%x; "
-                      "seq no %d; signal level %d; temperature %3.2f" % \
-                          (sensor_id, seq_no, signal_level, temp))
+                      "seq no %d; signal level %d; temperature %3.2f; "
+                      "humidity %s%%;" % \
+                          (sensor_id, seq_no, signal_level, temp, hum))
         if not self.temp_sensors.has_key(sensor_id):
             syslog.syslog(syslog.LOG_DEBUG,
                           "Sensor %d has not been seen before." % sensor_id)
             self.temp_sensors[sensor_id] = TempSensor(sensor_id)
         sensor = self.temp_sensors[sensor_id]
-        sensor.update(temp, signal_level)
+        sensor.update(temp,  signal_level, hum)
         self.add_event(EVENT_TYPE_SENSOR_READING, sensor.sensor_id, 0,
                        sensor.name, str(sensor.temp))
     def _load(self):

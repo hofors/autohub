@@ -21,6 +21,9 @@ TYPE_TEMP_MESSAGE = 0x50
 SUBTYPE_TEMP_LACROSSE = 0x5
 SUBTYPE_TEMP_VIKING_02811 = 0x7
 
+TYPE_TEMP_HUM_MESSAGE = 0x52
+SUBTYPE_TEMP_HUM_VIKING_02035_02038 = 0x9
+
 TYPE_UNDECODED_MESSAGE = 0x3
 SUBTYPE_UNDECODED_LACROSSE = 0x4
 
@@ -60,6 +63,8 @@ class Decoder:
             self.parse_undecoded()
         elif ptype == TYPE_TEMP_MESSAGE:
             self.parse_temp()
+        elif ptype == TYPE_TEMP_HUM_MESSAGE:
+            self.parse_temp_hum()
         elif ptype == TYPE_LIGHTING2_MESSAGE:
             self.parse_lighting2()
         else:
@@ -74,8 +79,26 @@ class Decoder:
             else:
                 temp = - ((self.get_byte(6) & 0x7F)*256 + self.get_byte(7)) / 10.0
             signal_level = (self.get_byte(8) & 0xf0) >> 4
-            self.temp_cb(addr, seq_no, temp, signal_level)
+            self.temp_cb(addr, seq_no, temp, signal_level, None)
             if self.get_byte(8) & 0xf == 0:
+                syslog.syslog(syslog.LOG_WARNING,
+                              "Battery for sensor %d is low." % addr)
+        else:
+            syslog.syslog(syslog.LOG_DEBUG,
+                          "Unknown temperature message subtype 0x%x" % subtype)
+    def parse_temp_hum(self):
+        subtype = self.get_byte(2)
+        if subtype == SUBTYPE_TEMP_HUM_VIKING_02035_02038:
+            seq_no = self.get_byte(3)
+            addr = self.get_byte(4)<<8 + self.get_byte(5)
+            if (self.get_byte(6) & 0x80) == 0:
+                temp = (self.get_byte(6)*256+self.get_byte(7)) / 10.0
+            else:
+                temp = - ((self.get_byte(6) & 0x7F)*256 + self.get_byte(7)) / 10.0
+            humidity = self.get_byte(8)
+            signal_level = (self.get_byte(10) & 0xf0) >> 4
+            self.temp_cb(addr, seq_no, temp, signal_level, humidity)
+            if self.get_byte(10) & 0xf == 0:
                 syslog.syslog(syslog.LOG_WARNING,
                               "Battery for sensor %d is low." % addr)
         else:
