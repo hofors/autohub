@@ -21,6 +21,11 @@ def usage(name):
     print "%s [-s server] switch set <device-id> <unit-id> on|off" % name
     print "%s [-s server] switch set <name> on|off" % name
     print "%s [-s server] switch set-name <device-id> <unit-id> <name>" % name
+    print "%s [-s server] switch del <name>" % name
+    print "%s [-s server] button" % name
+    print "%s [-s server] button set-name <name> <device-id> <unit-id>" % name
+    print "%s [-s server] button bind <name> on|off <cmd>" % name
+    print "%s [-s server] button unbind <name> on|off" % name
     print "%s [-s server] event" % name
     print "%s -h" % name
 
@@ -52,7 +57,7 @@ def temp_del_cmd(server, sensor_id):
     else:
         return 1
 
-STALETIME=60*10
+STALETIME=6*60*60
 def temp_purge_cmd(server):
     for sensor in server.list_temp_sensors():
         if sensor[3] > STALETIME:
@@ -111,6 +116,38 @@ def set_switch_name_cmd(server, s_device_id, s_unit_id, s_name):
     server.set_switch_name(int(s_device_id, 16), int(s_unit_id, 10), s_name)
     return 0
 
+def del_switch_cmd(server, s_name):
+    if s_name == "Unnamed":
+        s_name = None
+    server.del_switch(s_name)
+    return 0
+
+def list_buttons_cmd(server):
+    for device_id, unit_id, name, on_action, off_action in server.list_buttons():
+        if name == None:
+            name = "Unnamed"
+        s = "Button %s [0x%x %d]" % (name, device_id, unit_id)
+        if on_action != None or off_action != None:
+            s += ":"
+            if on_action != None:
+                s += " on: \"%s\"" % on_action
+            if off_action != None:
+                s += " off: \"%s\"" % off_action
+        print(s)
+    return 0
+
+def set_button_name_cmd(server, b_device_id, b_unit_id, b_name):
+    server.set_button_name(int(b_device_id, 16), int(b_unit_id, 10), b_name)
+    return 0
+
+def bind_button_cmd(server, b_name, b_state, b_cmd):
+    server.bind_button(b_name, b_state, b_cmd)
+    return 0
+
+def unbind_button_cmd(server, b_name, b_state):
+    server.bind_button(b_name, b_state, None)
+    return 0
+
 def get_event_log_cmd(server):
     for event in server.get_event_log():
         (event_type, event_time, device_id, unit_id, source_name, \
@@ -118,12 +155,15 @@ def get_event_log_cmd(server):
         if not source_name:
             source_name = "Unnamed"
         value_s = ""
-        if event_value:
+        if event_value != None:
             value_s = ": %s" % event_value
         event_time_s = time.ctime(event_time)
-        print "%s: %s \"%s\" [0x%x %d]%s" % (event_time_s, event_type,
+        unit_id_s = ""
+        if unit_id != None:
+            unit_id_s = " %d" % unit_id
+        print "%s: %s \"%s\" [0x%x%s]%s" % (event_time_s, event_type,
                                              source_name, device_id,
-                                             unit_id, value_s)
+                                             unit_id_s, value_s)
     return 0
 
 env_host = os.getenv('AUTOHUB_SERVER')
@@ -183,6 +223,18 @@ elif args[0] == "switch":
             ecode = set_switch_cmd(s, args[3], name=args[2])
         elif args[1] == "set-name" and len(args) == 5:
             ecode = set_switch_name_cmd(s, args[2], args[3], args[4])
+        elif args[1] == "del" and len(args) == 3:
+            ecode = del_switch_cmd(s, args[2])
+elif args[0] == "button":
+    if len(args) == 1:
+        ecode = list_buttons_cmd(s)
+    elif len(args) > 2:
+        if args[1] == "bind" and len(args) == 5:
+            ecode = bind_button_cmd(s, args[2], args[3], args[4])
+        if args[1] == "unbind" and len(args) == 4:
+            ecode = unbind_button_cmd(s, args[2], args[3])
+        elif args[1] == "set-name" and len(args) == 5:
+            ecode = set_button_name_cmd(s, args[2], args[3], args[4])
 elif args[0] == "event":
     if len(args) == 1:
         ecode = get_event_log_cmd(s)

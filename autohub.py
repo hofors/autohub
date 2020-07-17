@@ -32,7 +32,7 @@ class TempSensor:
         self.temp = temp
         self.signal_level = signal_level
 
-EVENT_TYPE_BUTTON_PRESSED = "button-pressed"
+EVENT_TYPE_BUTTON = "button"
 EVENT_TYPE_SENSOR_READING = "sensor-reading"
 EVENT_TYPE_SWITCH_SET = "switch-set"
 
@@ -82,13 +82,27 @@ def synchronized():
         return new_function
     return wrap
 
+class Button:
+    def __init__(self, device_id, unit_id, name):
+        self.device_id = device_id
+        self.unit_id = unit_id
+        self.name = name
+        self.on_action = None
+        self.off_action = None
+    def turned_on(self):
+        print "Doing %s" % self.on_action
+    def turned_off(self):
+        print "Doing %s" % self.off_action
+
 MAX_EVENT_LOG_SIZE = 10000
 
 class AutoHub:
     def __init__(self, dev_filename, state_filename):
-        self._rfxtrx433 = rfxtrx433.RFXtrx433(dev_filename, self._handle_temp)
+        self._rfxtrx433 = rfxtrx433.RFXtrx433(dev_filename, self._handle_temp,
+                                              self._handle_button)
         self.temp_sensors = {}
         self.switches = []
+        self.buttons = []
         self.event_log = []
         self._lock = threading.RLock()
         self.state_filename = state_filename
@@ -137,6 +151,10 @@ class AutoHub:
                                           old_state_str, switch.state_str()))
         self.add_event(EVENT_TYPE_SWITCH_SET, switch.device_id,
                        switch.unit_id, switch.name, switch.state_str())
+    @synchronized()
+    def del_switch(self, name):
+        idx = self._switch_index_by_name(name)
+        del self.switches[idx]
     def _switch_index(self, device_id, unit_id):
         for i in range(0, len(self.switches)):
             s = self.switches[i]
@@ -157,6 +175,37 @@ class AutoHub:
         idx = self._switch_index(device_id, unit_id)
         assert idx != -1
         return self.switches[idx]
+    def _button_index_by_name(self, name):
+        for i in range(0, len(self.buttons)):
+            b = self.buttons[i]
+            if b.name == name:
+                return i
+        return -1
+    def _button_by_name(self, name):
+        idx = self._button_index_by_name(name)
+        if idx != -1:
+            return self.buttons[idx]
+    def _button_by_addr(self, device_id, unit_id):
+        for b in self.buttons:
+            if b.device_id == device_id and b.unit_id == unit_id:
+                return b
+    @synchronized()
+    def set_button_name(self, device_id, unit_id, name):
+        idx = self._button_index_by_name(name)
+        button = Button(device_id, unit_id, name)
+        if idx != -1:
+            self.buttons[idx] = button
+        else:
+            self.buttons.append(button)
+    def has_button(self, name):
+        return self._button_index_by_name(name) != -1
+    def bind_button(self, name, state, action):
+        button = self._button_by_name(name)
+        if button != None:
+            if state == 'on':
+                button.on_action = action
+            elif state == 'off':
+                button.off_action = action
     @synchronized()
     def clear_event_log(self):
         self.event_log = []
@@ -178,22 +227,40 @@ class AutoHub:
             self.temp_sensors[sensor_id] = TempSensor(sensor_id)
         sensor = self.temp_sensors[sensor_id]
         sensor.update(temp, signal_level)
-        self.add_event(EVENT_TYPE_SENSOR_READING, sensor.sensor_id, 0,
+        self.add_event(EVENT_TYPE_SENSOR_READING, sensor.sensor_id, None,
                        sensor.name, str(sensor.temp))
+    def _handle_button(self, device_id, unit_id, state):
+        button = self._button_by_addr(device_id, unit_id)
+
+        if button != None:
+            button_name = button.name
+            if state != 0:
+                action = button.on_action
+            else:
+                action = button.off_action
+            if action != None:
+                syslog.syslog(syslog.LOG_INFO, "Running cmd \"%s\"." % action)
+                os.system(action)
+        else:
+            button_name = "Unnamed"
+        self.add_event(EVENT_TYPE_BUTTON, device_id, unit_id, button_name, state)
     def _load(self):
         s = shelve.open(self.state_filename)
         if s.has_key("switches"):
             self.switches = s["switches"]
+        if s.has_key("buttons"):
+            self.buttons = s["buttons"]
         if s.has_key("temp_sensors"):
             self.temp_sensors = s["temp_sensors"]
-        if s.has_key("event_log"):
-            self.event_log = s["event_log"]
+#        if s.has_key("event_log"):
+#            self.event_log = s["event_log"]
         s.close()
     def _save(self):
         s = shelve.open(self.state_filename)
         s["switches"] = self.switches
+        s["buttons"] = self.buttons
         s["temp_sensors"] = self.temp_sensors
-        s["event_log"] = self.event_log
+#        s["event_log"] = self.event_log
         s.close()
 
 
