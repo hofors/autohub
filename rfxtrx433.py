@@ -29,11 +29,14 @@ SUBTYPE_LIGHTING2_AC = 0x0
 
 SUBTYPE_LIGHTING2_ANSLUT = 0x2
 
+TYPE_REMOTE_MESSAGE = 0x30
+
 class Decoder:
-    def __init__(self, status_cb, temp_cb):
+    def __init__(self, status_cb, temp_cb, button_cb):
         self.packet_data = ""
         self.status_cb = status_cb
         self.temp_cb = temp_cb
+        self.button_cb = button_cb
     def packet_done(self):
         data_len = len(self.packet_data)
         return data_len > 0 and data_len == (ord(self.packet_data[0])+1)
@@ -90,6 +93,7 @@ class Decoder:
             state = self.get_byte(9)
             signal_level = (self.get_byte(11) & 0xf0) >> 4
             syslog.syslog(syslog.LOG_DEBUG, "Lighting 2 - AC type message received. Seqno %d, device address 0x%x, unit %d, state %d, signal_level %d." % (seq_no, addr, unit, state, signal_level))
+            self.button_cb(addr, unit, state)
         else:
             syslog.syslog(syslog.LOG_WARNING,
                           "Unknown Lighting 2 subtype 0x%x" % state)
@@ -142,13 +146,13 @@ RESEND_TIMES = 3
 RESEND_DELAY = 0.15
 
 class RFXtrx433 (threading.Thread):
-    def __init__(self, dev_filename, temp_cb):
+    def __init__(self, dev_filename, temp_cb, button_cb):
         threading.Thread.__init__(self)
         self.daemon = True
         self.dev_filename = dev_filename
         self._seq = 1
         self._decoder = Decoder(self._handle_status_response,
-                                temp_cb)
+                                temp_cb, button_cb)
         self.firmware_rev = None
         self.shouldStop = False
     def init(self):
@@ -198,7 +202,8 @@ class RFXtrx433 (threading.Thread):
             self._seq = 1
         return this
     def _write_packet(self, payload):
-        packet = chr(len(payload))
+        #packet = chr(len(payload))
+        packet = struct.pack("!H", len(payload))
         packet += payload
         self._dev.write(packet)
         self._dev.flush()

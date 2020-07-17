@@ -16,8 +16,12 @@ class JSONRPCIf (threading.Thread):
                        self.get_switch, self.set_switch, \
                        self.set_switch_name, self.set_switch_by_name, \
                        self.get_switch_by_name, \
+                       self.del_switch, \
                        self.set_temp_sensor_name, \
                        self.del_temp_sensor, \
+                       self.list_buttons, \
+                       self.set_button_name, \
+                       self.bind_button, \
                        self.get_event_log]:
             self.server.register_function(f)
     def list_temp_sensors(self):
@@ -106,6 +110,37 @@ class JSONRPCIf (threading.Thread):
             result = [ True, s.state ]
         self.autohub.unlock()
         return result
+    def del_switch(self, name):
+        self.autohub.lock()
+        if self.autohub.has_switch_by_name(name):
+            self.autohub.del_switch(name)
+            result = True
+        else:
+            result = False
+        self.autohub.unlock()
+        return result
+    def list_buttons(self):
+        result = []
+        self.autohub.lock()
+        for b in self.autohub.buttons:
+            result.append((b.device_id, b.unit_id, b.name, b.on_action, b.off_action))
+        self.autohub.unlock()
+        return result
+    def set_button_name(self, device_id, unit_id, name):
+        self.autohub.lock()
+        try:
+            print("json")
+            self.autohub.set_button_name(device_id, unit_id, name)
+        except Exception as e:
+            traceback.print_exc()
+        self.autohub.unlock()
+    def bind_button(self, name, state, action):
+        self.autohub.lock()
+        try:
+            self.autohub.bind_button(name, state, action)
+        except Exception as e:
+            traceback.print_exc()
+        self.autohub.unlock()
     def get_event_log(self):
         result = []
         self.autohub.lock()
