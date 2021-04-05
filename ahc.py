@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
 import sys
@@ -11,23 +11,23 @@ DEFAULT_HOST="localhost"
 DEFAULT_PORT=3444
 
 def usage(name):
-    print "%s [-s server] temp" % name
-    print "%s [-s server] temp set-name <sensor-id> <name>" % name
-    print "%s [-s server] temp del <sensor-id>" % name
-    print "%s [-s server] temp purge" % name
-    print "%s [-s server] switch" % name
-    print "%s [-s server] switch get <device-id> <unit-id>" % name
-    print "%s [-s server] switch get <name>" % name
-    print "%s [-s server] switch set <device-id> <unit-id> on|off" % name
-    print "%s [-s server] switch set <name> on|off" % name
-    print "%s [-s server] switch set-name <device-id> <unit-id> <name>" % name
-    print "%s [-s server] switch del <name>" % name
-    print "%s [-s server] button" % name
-    print "%s [-s server] button set-name <name> <device-id> <unit-id>" % name
-    print "%s [-s server] button bind <name> on|off <cmd>" % name
-    print "%s [-s server] button unbind <name> on|off" % name
-    print "%s [-s server] event" % name
-    print "%s -h" % name
+    print("%s [-s server] temp" % name)
+    print("%s [-s server] temp set-name <sensor-id> <name>" % name)
+    print("%s [-s server] temp del <sensor-id>" % name)
+    print("%s [-s server] temp purge" % name)
+    print("%s [-s server] switch" % name)
+    print("%s [-s server] switch get <device-id> <unit-id>" % name)
+    print("%s [-s server] switch get <name>" % name)
+    print("%s [-s server] switch set <device-id> <unit-id> on|off" % name)
+    print("%s [-s server] switch set <name> on|off" % name)
+    print("%s [-s server] switch set-name <device-id> <unit-id> <name>" % name)
+    print("%s [-s server] switch del <name>" % name)
+    print("%s [-s server] button" % name)
+    print("%s [-s server] button set-name <name> <device-id> <unit-id>" % name)
+    print("%s [-s server] button bind <name> on|off <cmd>" % name)
+    print("%s [-s server] button unbind <name> on|off" % name)
+    print("%s [-s server] event" % name)
+    print("%s -h" % name)
 
 def make_url(host, port):
     return "http://%s:%d" % (host, port)
@@ -38,13 +38,13 @@ def temp_cmd(server):
             age = "%.0f s" % sensor[3]
         else:
             age = "unknown"
-        print "Sensor %s [%d]: %3.1f °C [%s]" % (sensor[1].encode("UTF-8"), \
-                                                     sensor[0], sensor[2], age)
+        print("Sensor %s [%d]: %3.1f °C [%s]" % (sensor[1].encode("UTF-8"), \
+                                                     sensor[0], sensor[2], age))
     return 0
 
 def temp_m_cmd(server):
     for sensor in server.list_temp_sensors():
-        print "%s %3.1f" % (sensor[1].encode("UTF-8"), sensor[2])
+        print("%s %3.1f" % (sensor[1].encode("UTF-8"), sensor[2]))
     return 0
 
 def temp_set_name_cmd(server, sensor_id, name):
@@ -76,8 +76,8 @@ def list_switches_cmd(server):
         name = switch[2]
         if not name:
             name = "Unnamed"
-        print "Switch %s [0x%x %d]: %s" % (name, switch[0], switch[1], \
-                                               state_str(switch[3]))
+        print("Switch %s [0x%x %d]: %s" % (name, switch[0], switch[1], \
+                                               state_str(switch[3])))
     return 0
 
 def get_switch_cmd(server, device_id=None, unit_id=None, name=None):
@@ -87,10 +87,10 @@ def get_switch_cmd(server, device_id=None, unit_id=None, name=None):
         switch_exists, switch_state = \
             server.get_switch(int(device_id, 16), int(unit_id, 10))
     if switch_exists:
-        print state_str(switch_state)
+        print(state_str(switch_state))
         return 0
     else:
-        print "unknown"
+        print("unknown")
         return 1
 
 def set_switch_cmd(server, state, device_id=None, unit_id=None, 
@@ -100,13 +100,13 @@ def set_switch_cmd(server, state, device_id=None, unit_id=None,
     elif state == "off":
         state = 0
     else:
-        print 'A switch is "on" or "off"'
+        print('A switch is "on" or "off"')
         sys.exit(1)
     if name:
         if server.set_switch_by_name(name, state):
             return 0
         else:
-            print 'No switch "%s" exists.' % name
+            print('No switch "%s" exists.' % name)
             return 1
     else:
         server.set_switch(int(device_id, 16), int(unit_id, 10), state)
@@ -161,9 +161,9 @@ def get_event_log_cmd(server):
         unit_id_s = ""
         if unit_id != None:
             unit_id_s = " %d" % unit_id
-        print "%s: %s \"%s\" [0x%x%s]%s" % (event_time_s, event_type,
+        print("%s: %s \"%s\" [0x%x%s]%s" % (event_time_s, event_type,
                                              source_name, device_id,
-                                             unit_id_s, value_s)
+                                             unit_id_s, value_s))
     return 0
 
 env_host = os.getenv('AUTOHUB_SERVER')
@@ -184,8 +184,8 @@ try:
             host = arg
         else:
             assert False
-except getopt.GetoptError, err:
-    print str(err)
+except getopt.GetoptError as err:
+    print(str(err))
     usage(sys.argv[0])
     sys.exit(1)
 

@@ -31,17 +31,20 @@ SUBTYPE_LIGHTING2_ANSLUT = 0x2
 
 TYPE_REMOTE_MESSAGE = 0x30
 
+def to_byte(v):
+    return v.to_bytes(1, 'big')
+
 class Decoder:
     def __init__(self, status_cb, temp_cb, button_cb):
-        self.packet_data = ""
+        self.packet_data = bytearray()
         self.status_cb = status_cb
         self.temp_cb = temp_cb
         self.button_cb = button_cb
     def packet_done(self):
         data_len = len(self.packet_data)
-        return data_len > 0 and data_len == (ord(self.packet_data[0])+1)
+        return data_len > 0 and data_len == (self.packet_data[0] + 1)
     def put_char(self, c):
-        self.packet_data += c
+        self.packet_data.extend(c)
         if self.packet_done():
             self.parse_packet()
             self.reset()
@@ -49,7 +52,7 @@ class Decoder:
         else:
             return False
     def get_byte(self, index):
-        return ord(self.packet_data[index])
+        return self.packet_data[index]
     def get_uint(self, index):
         return struct.unpack_from("!I", self.packet_data, index)[0]
     def parse_packet(self):
@@ -102,14 +105,14 @@ class Decoder:
         if subtype == SUBTYPE_UNDECODED_LACROSSE:
             msg = ""
             for b in self.packet_data[2:]:
-                msg += ("%d " % ord(b))
+                msg += ("%d " % b)
             msg += "\n"
             for b in self.packet_data[2:]:
-                msg += ("[%d %d] " % (ord(b)&0xf, (ord(b)>>4)&0xf))
+                msg += ("[%d %d] " % (b&0xf, (b>>4)&0xf))
             msg += "\n"
             for b in self.packet_data[2:]:
                 for i in range(7, -1, -1):
-                    if (ord(b) >> i) & 1 == 1:
+                    if (b >> i) & 1 == 1:
                         msg += "1"
                     else:
                         msg += "0"
@@ -135,11 +138,11 @@ class Decoder:
             syslog.syslog(syslog.LOG_DEBUG,
                           "Unknown interface response for command 0x%x" % cmd)
     def reset(self):
-        self.packet_data = ""
+        self.packet_data = bytearray()
 
 def pad(ary, plen):
     while len(ary) < plen:
-        ary += chr(0)
+        ary += b'\x00'
     return ary
 
 RESEND_TIMES = 3
@@ -200,7 +203,7 @@ class RFXtrx433 (threading.Thread):
         self._seq += 1
         if self._seq >= 256:
             self._seq = 1
-        return this
+        return this.to_bytes(1, 'big')
     def _write_packet(self, payload):
         #packet = chr(len(payload))
         packet = struct.pack("!H", len(payload))
@@ -230,10 +233,9 @@ class RFXtrx433 (threading.Thread):
         syslog.syslog(syslog.LOG_DEBUG, "Firmware revision: %d" % firmware_rev)
         self.firmware_rev = firmware_rev
     def _issue_interface_command(self, cmd):
-        self._write_packet(chr(TYPE_INTERFACE_CONTROL) + \
-                              chr(SUBTYPE_INTERFACE_COMMAND) + \
-                              chr(self._nextSeq()) + \
-                              chr(cmd))
+        self._write_packet(to_byte(TYPE_INTERFACE_CONTROL) +
+                           to_byte(SUBTYPE_INTERFACE_COMMAND) +
+                           self._nextSeq() + to_byte(cmd))
     def _process_response(self):
         completed = False
         while not completed:

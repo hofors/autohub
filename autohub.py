@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
 #
@@ -90,9 +90,9 @@ class Button:
         self.on_action = None
         self.off_action = None
     def turned_on(self):
-        print "Doing %s" % self.on_action
+        print("Doing %s" % self.on_action)
     def turned_off(self):
-        print "Doing %s" % self.off_action
+        print("Doing %s" % self.off_action)
 
 MAX_EVENT_LOG_SIZE = 10000
 
@@ -221,7 +221,7 @@ class AutoHub:
         syslog.syslog(syslog.LOG_DEBUG, "Got reading from sensor 0x%x; "
                       "seq no %d; signal level %d; temperature %3.2f" % \
                           (sensor_id, seq_no, signal_level, temp))
-        if not self.temp_sensors.has_key(sensor_id):
+        if sensor_id not in self.temp_sensors:
             syslog.syslog(syslog.LOG_DEBUG,
                           "Sensor %d has not been seen before." % sensor_id)
             self.temp_sensors[sensor_id] = TempSensor(sensor_id)
@@ -246,11 +246,11 @@ class AutoHub:
         self.add_event(EVENT_TYPE_BUTTON, device_id, unit_id, button_name, state)
     def _load(self):
         s = shelve.open(self.state_filename)
-        if s.has_key("switches"):
+        if "switches" in s:
             self.switches = s["switches"]
-        if s.has_key("buttons"):
+        if "buttons" in s:
             self.buttons = s["buttons"]
-        if s.has_key("temp_sensors"):
+        if "temp_sensors" in s:
             self.temp_sensors = s["temp_sensors"]
 #        if s.has_key("event_log"):
 #            self.event_log = s["event_log"]
@@ -269,10 +269,10 @@ def quit(signum, frame):
     sys.exit(1)
 
 def usage(name):
-    print "Usage: %s [-F <rfxcom-dev>] [-f <state-file>]" % name
+    print("Usage: %s [-F <rfxcom-dev>] [-f <state-file>]" % name)
 
 DEFAULT_DEV_FILENAME = "/dev/ttyUSB0"
-DEFAULT_STATE_FILENAME = "autohub.dat"
+DEFAULT_STATE_FILENAME = "autohub"
 
 debug = False
 dev_filename = DEFAULT_DEV_FILENAME
@@ -292,8 +292,8 @@ try:
             sys.exit(0)
         else:
             assert False, "unhandled option"
-except getopt.GetoptError, err:
-    print str(err)
+except getopt.GetoptError as err:
+    print(str(err))
     usage(sys.argv[0])
     sys.exit(1)
 

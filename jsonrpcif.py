@@ -27,7 +27,7 @@ class JSONRPCIf (threading.Thread):
     def list_temp_sensors(self):
         result = []
         self.autohub.lock()
-        for s in self.autohub.temp_sensors.values():
+        for s in list(self.autohub.temp_sensors.values()):
             if s.name == None:
                 name = "%d" % s.sensor_id
             else:
@@ -42,7 +42,7 @@ class JSONRPCIf (threading.Thread):
     def del_temp_sensor(self, sensor_id):
         self.autohub.lock()
         sensors = self.autohub.temp_sensors
-        if sensors.has_key(sensor_id):
+        if sensor_id in sensors:
             del sensors[sensor_id]
             retval = True
         else:
@@ -51,7 +51,7 @@ class JSONRPCIf (threading.Thread):
         return retval
     def set_temp_sensor_name(self, sensor_id, name):
         self.autohub.lock()
-        if self.autohub.temp_sensors.has_key(sensor_id):
+        if sensor_id in self.autohub.temp_sensors:
             self.autohub.temp_sensors[sensor_id].name = name
             result = True
         else:

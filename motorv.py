@@ -37,7 +37,7 @@ def heating_time(temp):
         return 30
 
 def usage(n):
-    print "%s <target-time>" % n
+    print("%s <target-time>" % n)
 
 def to_datetime(hour, minute):
     now = datetime.datetime.now()
