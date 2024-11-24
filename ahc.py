@@ -26,6 +26,7 @@ def usage(name):
     print("%s [-s server] button set-name <name> <device-id> <unit-id>" % name)
     print("%s [-s server] button bind <name> on|off <cmd>" % name)
     print("%s [-s server] button unbind <name> on|off" % name)
+    print("%s [-s server] button del <name>" % name)
     print("%s [-s server] event" % name)
     print("%s -h" % name)
 
@@ -140,6 +141,10 @@ def set_button_name_cmd(server, b_device_id, b_unit_id, b_name):
     server.set_button_name(int(b_device_id, 16), int(b_unit_id, 10), b_name)
     return 0
 
+def del_button_cmd(server, b_name):
+    server.del_button(b_name)
+    return 0
+
 def bind_button_cmd(server, b_name, b_state, b_cmd):
     server.bind_button(b_name, b_state, b_cmd)
     return 0
@@ -235,6 +240,8 @@ elif args[0] == "button":
             ecode = unbind_button_cmd(s, args[2], args[3])
         elif args[1] == "set-name" and len(args) == 5:
             ecode = set_button_name_cmd(s, args[2], args[3], args[4])
+        elif args[1] == "del" and len(args) == 3:
+            ecode = del_button_cmd(s, args[2])
 elif args[0] == "event":
     if len(args) == 1:
         ecode = get_event_log_cmd(s)

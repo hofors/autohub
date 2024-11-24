@@ -199,6 +199,7 @@ class AutoHub:
             self.buttons.append(button)
     def has_button(self, name):
         return self._button_index_by_name(name) != -1
+    @synchronized()
     def bind_button(self, name, state, action):
         button = self._button_by_name(name)
         if button != None:
@@ -206,6 +207,11 @@ class AutoHub:
                 button.on_action = action
             elif state == 'off':
                 button.off_action = action
+    @synchronized()
+    def del_button(self, name):
+        idx = self._button_index_by_name(name)
+
+        del self.buttons[idx]
     @synchronized()
     def clear_event_log(self):
         self.event_log = []
@@ -218,11 +224,11 @@ class AutoHub:
             del self.event_log[0]
     @synchronized()
     def _handle_temp(self, sensor_id, seq_no, temp, signal_level):
-        syslog.syslog(syslog.LOG_DEBUG, "Got reading from sensor 0x%x; "
+        syslog.syslog(syslog.LOG_INFO, "Got reading from sensor 0x%x; "
                       "seq no %d; signal level %d; temperature %3.2f" % \
                           (sensor_id, seq_no, signal_level, temp))
         if sensor_id not in self.temp_sensors:
-            syslog.syslog(syslog.LOG_DEBUG,
+            syslog.syslog(syslog.LOG_INFO,
                           "Sensor %d has not been seen before." % sensor_id)
             self.temp_sensors[sensor_id] = TempSensor(sensor_id)
         sensor = self.temp_sensors[sensor_id]

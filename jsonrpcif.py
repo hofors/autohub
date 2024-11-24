@@ -22,6 +22,7 @@ class JSONRPCIf (threading.Thread):
                        self.list_buttons, \
                        self.set_button_name, \
                        self.bind_button, \
+                       self.del_button, \
                        self.get_event_log]:
             self.server.register_function(f)
     def list_temp_sensors(self):
@@ -138,6 +139,13 @@ class JSONRPCIf (threading.Thread):
         self.autohub.lock()
         try:
             self.autohub.bind_button(name, state, action)
+        except Exception as e:
+            traceback.print_exc()
+        self.autohub.unlock()
+    def del_button(self, name):
+        self.autohub.lock()
+        try:
+            self.autohub.del_button(name)
         except Exception as e:
             traceback.print_exc()
         self.autohub.unlock()
